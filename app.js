@@ -48,7 +48,8 @@ function render(){
   grid.innerHTML=shown.map(item=>{
     const category={curso:'Curso',evento:'Evento',outro:'Outro'}[item.category]||'Outro';
     const src=imageUrl(item.image_path);
-    const visual=src?`<img src="${escapeHTML(src)}" alt="Imagem do certificado ${escapeHTML(item.title)}">`:`<div class="cert-placeholder"><span class="mini-label">CERTIFICADO DE CONCLUSÃO</span><strong>${escapeHTML(item.title)}</strong><small>${escapeHTML(item.institution)}</small></div>`;
+    const isPdf=item.image_path?.toLowerCase().endsWith('.pdf');
+    const visual=isPdf?`<div class="pdf-thumb"><span class="pdf-icon">PDF</span><strong>Certificado digital</strong><small>ABRIR DOCUMENTO ↗</small></div>`:src?`<img src="${escapeHTML(src)}" alt="Imagem do certificado ${escapeHTML(item.title)}">`:`<div class="cert-placeholder"><span class="mini-label">CERTIFICADO DE CONCLUSÃO</span><strong>${escapeHTML(item.title)}</strong><small>${escapeHTML(item.institution)}</small></div>`;
     const open=item.certificate_url?`<a class="cert-open" href="${escapeHTML(item.certificate_url)}" target="_blank" rel="noopener noreferrer" aria-label="Abrir certificado ${escapeHTML(item.title)}">↗</a>`:'';
     const actions=session?`<div class="admin-actions"><button type="button" data-edit="${item.id}">EDITAR</button><button type="button" data-remove="${item.id}">REMOVER</button></div>`:'';
     return `<article class="cert-card" data-detail="${item.id}" tabindex="0" role="button" aria-label="Ver detalhes de ${escapeHTML(item.title)}"><div class="cert-visual">${visual}<span class="cert-category">${category}</span>${open}</div><div class="cert-info"><div><h3>${escapeHTML(item.title)}</h3><p class="cert-institution">${escapeHTML(item.institution)}</p></div>${item.completed_month?`<span class="cert-date">${formatDate(item.completed_month)}</span>`:''}</div>${item.note?`<p class="cert-note">“${escapeHTML(item.note)}”</p>`:''}${actions}</article>`;
@@ -62,7 +63,8 @@ async function showDetails(id){
   const item=certificates.find(certificate=>certificate.id===id);if(!item)return;
   const category={curso:'Curso',evento:'Evento',outro:'Outro'}[item.category]||'Outro';
   const src=imageUrl(item.image_path);
-  const image=src?`<div class="detail-image-wrap"><img class="detail-image" src="${escapeHTML(src)}" alt="Imagem completa do certificado ${escapeHTML(item.title)}"><a class="image-fullscreen" href="${escapeHTML(src)}" target="_blank" rel="noopener noreferrer">ABRIR IMAGEM COMPLETA ↗</a></div>`:`<div class="detail-no-image"><span>IMAGEM NÃO DISPONÍVEL</span><strong>${escapeHTML(item.title)}</strong></div>`;
+  const isPdf=item.image_path?.toLowerCase().endsWith('.pdf');
+  const image=isPdf?`<div class="detail-pdf-wrap"><iframe class="detail-pdf" src="${escapeHTML(src)}#toolbar=1&navpanes=0" title="Certificado em PDF: ${escapeHTML(item.title)}"></iframe><a class="image-fullscreen" href="${escapeHTML(src)}" target="_blank" rel="noopener noreferrer">ABRIR PDF COMPLETO ↗</a></div>`:src?`<div class="detail-image-wrap"><img class="detail-image" src="${escapeHTML(src)}" alt="Imagem completa do certificado ${escapeHTML(item.title)}"><a class="image-fullscreen" href="${escapeHTML(src)}" target="_blank" rel="noopener noreferrer">ABRIR IMAGEM COMPLETA ↗</a></div>`:`<div class="detail-no-image"><span>IMAGEM NÃO DISPONÍVEL</span><strong>${escapeHTML(item.title)}</strong></div>`;
   document.querySelector('#detail-content').innerHTML=`${image}<section class="detail-info"><div class="eyebrow"><span class="eyebrow-line"></span> DETALHES DA CONQUISTA</div><span class="detail-category">${category}</span><h2>${escapeHTML(item.title)}</h2><dl><div><dt>INSTITUIÇÃO</dt><dd>${escapeHTML(item.institution)}</dd></div><div><dt>CONCLUSÃO</dt><dd>${item.completed_month?formatDate(item.completed_month):'Não informada'}</dd></div><div><dt>CATEGORIA</dt><dd>${category}</dd></div></dl>${item.note?`<p class="detail-note">“${escapeHTML(item.note)}”</p>`:''}${item.certificate_url?`<a class="submit-button detail-link" href="${escapeHTML(item.certificate_url)}" target="_blank" rel="noopener noreferrer">Abrir certificado online <span>↗</span></a>`:''}</section>`;
   if(!detailDialog.open)detailDialog.showModal();
 }
@@ -97,12 +99,14 @@ detailDialog.addEventListener('click',event=>{if(event.target===detailDialog)det
 const uploadArea=form.querySelector('.upload-area');
 ['dragenter','dragover'].forEach(name=>uploadArea.addEventListener(name,event=>{event.preventDefault();uploadArea.classList.add('drag-over')}));
 ['dragleave','drop'].forEach(name=>uploadArea.addEventListener(name,event=>{event.preventDefault();uploadArea.classList.remove('drag-over')}));
-uploadArea.addEventListener('drop',event=>{const file=event.dataTransfer.files[0];if(file&&file.type.startsWith('image/')){try{const transfer=new DataTransfer();transfer.items.add(file);imageInput.files=transfer.files}catch{}}});
+uploadArea.addEventListener('drop',event=>{const file=event.dataTransfer.files[0];if(file&&(file.type.startsWith('image/')||file.type==='application/pdf')){try{const transfer=new DataTransfer();transfer.items.add(file);imageInput.files=transfer.files}catch{}}});
 
 form.addEventListener('submit',async event=>{
   event.preventDefault();const error=document.querySelector('#form-error');error.textContent='';if(!session||!supabase)return;
   const data=new FormData(form);const file=imageInput.files[0];
-  if(file&&file.size>4*1024*1024){error.textContent='A imagem precisa ter até 4 MB.';return}
+  const isPdf=file?.type==='application/pdf';
+  if(file&&(!file.type.startsWith('image/')&&!isPdf)){error.textContent='Escolha uma imagem ou um arquivo PDF.';return}
+  if(file&&file.size>(isPdf?10:4)*1024*1024){error.textContent=isPdf?'O PDF precisa ter até 10 MB.':'A imagem precisa ter até 4 MB.';return}
   if(!data.get('url')&&!file&&!(editingId&&certificates.find(item=>item.id===editingId)?.image_path)){error.textContent='Adicione o link do certificado ou uma imagem/print.';return}
   const existing=editingId?certificates.find(item=>item.id===editingId):null;
   let imagePath=existing?.image_path||null;

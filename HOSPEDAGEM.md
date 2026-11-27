@@ -22,3 +22,7 @@ O portfólio fica público para visitantes. Adicionar, editar e remover registro
 Publique `index.html`, `styles.css`, `app.js`, `supabase-config.js` e qualquer outro arquivo estático no provedor de hospedagem. Cadastre o domínio publicado em **Authentication > URL Configuration > Site URL** e Redirect URLs.
 
 Após publicar, teste a página anônima e o login do administrador. A página mostra os certificados publicamente; a área de administração aparece após autenticação.
+
+## Habilitar envio de PDFs
+
+Como o bucket do Supabase já foi configurado, execute uma vez o conteúdo de `supabase-pdf-setup.sql` no **SQL Editor**. Isso permite arquivos PDF de até 10 MB; imagens continuam limitadas a 4 MB. O PDF aparece na visualização detalhada e pode ser aberto em tamanho completo.

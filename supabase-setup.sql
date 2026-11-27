@@ -34,9 +34,9 @@ create policy "Só o administrador remove certificados"
 
 -- Imagens públicas para exibição no portfólio; upload e remoção apenas pelo administrador.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('certificate-images', 'certificate-images', true, 4194304,
-        array['image/png', 'image/jpeg', 'image/webp', 'image/gif'])
-on conflict (id) do update set public = true, file_size_limit = 4194304,
+values ('certificate-images', 'certificate-images', true, 10485760,
+        array['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'application/pdf'])
+on conflict (id) do update set public = true, file_size_limit = 10485760,
   allowed_mime_types = excluded.allowed_mime_types;
 
 create policy "Só o administrador envia imagens de certificados"
