@@ -33,6 +33,8 @@ async function loadCertificates(){
 }
 function render(){
   const query=document.querySelector('#search').value.trim().toLocaleLowerCase('pt-BR');
+  const dateFrom=document.querySelector('#date-from').value;
+  const dateTo=document.querySelector('#date-to').value;
   const counts={todos:certificates.length,curso:0,evento:0,outro:0};certificates.forEach(item=>counts[item.category]=(counts[item.category]||0)+1);
   document.querySelector('#total-count').textContent=String(certificates.length).padStart(2,'0');
   document.querySelector('#all-count').textContent=String(counts.todos).padStart(2,'0');
@@ -42,8 +44,10 @@ function render(){
   document.querySelectorAll('.filter').forEach(button=>button.classList.toggle('active',button.dataset.filter===activeFilter));
   const shown=certificates.filter(item=>{
     const matchesFilter=activeFilter==='todos'||item.category===activeFilter;
+    const hasCompletionDate=Boolean(item.completed_month);
+    const matchesDate=(!dateFrom&&!dateTo)||(hasCompletionDate&&(!dateFrom||item.completed_month>=dateFrom)&&(!dateTo||item.completed_month<=dateTo));
     const haystack=`${item.title} ${item.institution} ${item.note||''}`.toLocaleLowerCase('pt-BR');
-    return matchesFilter&&haystack.includes(query);
+    return matchesFilter&&matchesDate&&haystack.includes(query);
   });
   grid.innerHTML=shown.map(item=>{
     const category={curso:'Curso',evento:'Evento',outro:'Outro'}[item.category]||'Outro';
@@ -82,6 +86,9 @@ document.querySelectorAll('[data-close-modal]').forEach(button=>button.addEventL
 certificateDialog.addEventListener('click',event=>{if(event.target===certificateDialog)certificateDialog.close()});
 document.querySelectorAll('.filter').forEach(button=>button.addEventListener('click',()=>{activeFilter=button.dataset.filter;render()}));
 document.querySelector('#search').addEventListener('input',render);
+document.querySelector('#date-from').addEventListener('input',render);
+document.querySelector('#date-to').addEventListener('input',render);
+document.querySelector('#clear-dates').addEventListener('click',()=>{document.querySelector('#date-from').value='';document.querySelector('#date-to').value='';render()});
 grid.addEventListener('click',async event=>{
   const remove=event.target.closest('[data-remove]');
   if(remove){event.stopPropagation();if(!session)return;const item=certificates.find(c=>c.id===remove.dataset.remove);if(!item||!confirm(`Remover “${item.title}”?`))return;
